@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+backend/venv/
+backend/__pycache__/
+__pycache__/
+
+# Build outputs
+frontend/dist/
+build/
+*.pyc
+
+# Environment variables
+.env
+.env.local
+.env.production
+
+# Logs
+logs/*.log
+logs/*.pid
+backend/server.log
+frontend/dev.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Vercel
+.vercel
+
+# Cache
+backend/*.log
+data/youtube_cache.json
+data/youtube_shorts_cache.json
+data/saved_plans.json
+
+# Temporary files
+*.tmp
+temp/
+

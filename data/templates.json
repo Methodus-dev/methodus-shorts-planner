@@ -1,0 +1,255 @@
+{
+  "content_matrix": {
+    "structures": [
+      {
+        "name": "Actionable",
+        "description": "How can people do something, step-by-step?"
+      },
+      {
+        "name": "Motivational",
+        "description": "Inspire people to take action through a story or anecdote.\n"
+      },
+      {
+        "name": "Analytical",
+        "description": "Do a tear down of a company, person, content style, etc."
+      },
+      {
+        "name": "Contrarian",
+        "description": "Something you feel differently about vs. the status quo."
+      },
+      {
+        "name": "Observation",
+        "description": "What's something you've observed that you can talk about?"
+      },
+      {
+        "name": "X vs. Y",
+        "description": "Compare two situations for an interesting takeaway"
+      },
+      {
+        "name": "Present / Future",
+        "description": "How things work today vs. how you think in the future?"
+      },
+      {
+        "name": "Listicle",
+        "description": "A list of things (top books, people, podcasts, etc.) PLEASE USE SPARINGLY."
+      },
+      {
+        "name": "Upcoming Week",
+        "description": "What are you working on this week?"
+      },
+      {
+        "name": "Highs/Lows",
+        "description": "What went well and what went poorly. Usually good for a friday."
+      }
+    ],
+    "topics": [
+      "Assets",
+      "Automation",
+      "Autononomy",
+      "Brand",
+      "Building",
+      "Community",
+      "Confidence",
+      "Consequences",
+      "Consistency",
+      "Criticism",
+      "Digital products",
+      "Doubt",
+      "Ego",
+      "Entrepreneurship",
+      "Execution",
+      "Helping others",
+      "Leverage",
+      "Long game",
+      "Momentum",
+      "Money",
+      "Networking",
+      "Opportunity",
+      "Promotion",
+      "Publishing",
+      "Responsibility",
+      "Risk",
+      "Sales",
+      "Self-promotion",
+      "Sharing",
+      "Social Media",
+      "Solopreneurship",
+      "Success",
+      "Systems",
+      "Thinking",
+      "Time",
+      "Work Ethic",
+      "Writing"
+    ]
+  },
+  "copywriting_structures": [
+    {
+      "trailer": [
+        "There are 3 secrets every 7-figure business owner knows about email marketing…",
+        "That 5-figure business owners don’t.",
+        "Want them? Here they are...👇🏻"
+      ],
+      "meat": [
+        "7-figure business: Sends daily emails.",
+        "5-figure business: Sends weekly emails.",
+        "7-figure business: Sends a Friday newsletter with customer wins",
+        "5-figure business: Sends no newsletter at all.",
+        "7-figure business: Segments their customers using email marketing.",
+        "5 figure business: Has no built in segmentation for their customers."
+      ],
+      "summary": [
+        "So, remember…",
+        "You’re working 80 hours a week."
+      ],
+      "ctc": []
+    }
+  ],
+  "sub_niche_playbook": {
+    "niche_methods": [
+      {
+        "name": "Price",
+        "examples": "luxury, moderate, discount"
+      },
+      {
+        "name": "Demographics",
+        "examples": "Gender, age, income level, education level"
+      },
+      {
+        "name": "Level of quality",
+        "examples": "Premium, handmade, economical"
+      },
+      {
+        "name": "Psychographics",
+        "examples": "Values, interests, attitudes"
+      },
+      {
+        "name": "Vertical/Industry",
+        "examples": "Healthcare, finance, eComm"
+      },
+      {
+        "name": "Geographics",
+        "examples": "Residents of a certain country, city, or even neighborhood"
+      }
+    ],
+    "questions": [
+      {
+        "step": "Step",
+        "question": "Question",
+        "example": "Your Answer"
+      },
+      {
+        "step": 1,
+        "question": "What is a broad topic I know extremely well?",
+        "example": "부동산 투자"
+      },
+      {
+        "step": 2,
+        "question": "What's a niche I know even better?",
+        "example": "부동산 경매 투자"
+      },
+      {
+        "step": 3,
+        "question": "Who do you help in that sub-niche?",
+        "example": "가치투자를 지향하는 부동산 첫투자 희망자(30-40대)-투자금3천만원이상"
+      },
+      {
+        "step": null,
+        "question": "Finish here after \"Listening for customer problems\"",
+        "example": null
+      },
+      {
+        "step": 4,
+        "question": "What problem do you help them overcome?",
+        "example": "부동산 투자의 모든 허들(1순위 : 불안)"
+      },
+      {
+        "step": 5,
+        "question": "What outcome, specifically, do you help them achieve?",
+        "example": "성공적인 투자, 수익"
+      }
+    ]
+  },
+  "backstory_builder": {
+    "elements": [
+      {
+        "element": "Your problem or challenge",
+        "example": "I got fired 3 times between the ages 21 and 28. Never made a sale. Never hit a quota."
+      },
+      {
+        "element": "Internal struggles",
+        "example": "I didn't know what I was good at or if I was going to be successful."
+      },
+      {
+        "element": "External struggles",
+        "example": "My buddies all ridiculed me for it, and for living in small towns across the US."
+      },
+      {
+        "element": "What was your change event?",
+        "example": "I took a bus ride to NYC to interview at ZocDoc."
+      },
+      {
+        "element": "What was the spark?",
+        "example": "I was blown away by an intersection: the team, the product, the culture, and the energy of the city."
+      }
+    ]
+  },
+  "social_ecosystem": [
+    {
+      "name": "Jason Vana",
+      "platform": "LinkedIn",
+      "posting_time": "7:00a CT",
+      "url": "https://www.linkedin.com/in/jasonvana/detail/recent-activity/shares/",
+      "audience": "Motivated Marketers"
+    },
+    {
+      "name": "Kevin Dorsey",
+      "platform": "LinkedIn",
+      "posting_time": "7:15a CT",
+      "url": "https://www.linkedin.com/in/kddorsey3/detail/recent-activity/shares/",
+      "audience": "Motivated salespeople"
+    },
+    {
+      "name": "Austin Belcak",
+      "platform": "LinkedIn",
+      "posting_time": "8:10a CT",
+      "url": "https://www.linkedin.com/in/abelcak/detail/recent-activity/shares/",
+      "audience": "Motivated young grads"
+    },
+    {
+      "name": "Jackie Hermes",
+      "platform": "LinkedIn",
+      "posting_time": "8:10a CT",
+      "url": "https://www.linkedin.com/in/thejackiehermes/detail/recent-activity/shares/",
+      "audience": "Motivated Marketers"
+    },
+    {
+      "name": "Joel Lalgee",
+      "platform": "LinkedIn",
+      "posting_time": "8:15a CT",
+      "url": "https://www.linkedin.com/in/recruitmentmarketing1/detail/recent-activity/shares/",
+      "audience": "LinkedIn'ers"
+    },
+    {
+      "name": "Madeline Mann",
+      "platform": "LinkedIn",
+      "posting_time": "8:45a CT",
+      "url": "https://www.linkedin.com/in/madelinemann/detail/recent-activity/shares/",
+      "audience": "Motivated career pros"
+    }
+  ],
+  "hashtags": [
+    "#India - 67,000,000 Followers",
+    "#Innovation - 38,891,000 Followers",
+    "#HumanResources - 33,000,000 Followers",
+    "#Management - 36,122,000 Followers",
+    "#DigitalMarketing - 27,500,000 Followers",
+    "#Technology - 26,500,000 Followers",
+    "#Future - 24,000,000 Followers",
+    "#Futurism - 23,500,000 Followers",
+    "#Entrepreneurship - 22,800,000 Followers",
+    "#Careers - 22,500,000 Followers",
+    "#Marketing - 20,300,000 Followers",
+    "#Socialmedia - 19,750,000 Followers",
+    "#VentureCapital - 19,350,000 Followers"
+  ]
+}

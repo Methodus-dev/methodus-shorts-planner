@@ -1,0 +1,50 @@
+name: Update Shorts Data
+
+on:
+  schedule:
+    # 매일 한국 시간 오전 9시 (UTC 0시)에 실행
+    - cron: '0 0 * * *'
+  workflow_dispatch:  # 수동 실행 가능
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          
+      - name: Run crawler
+        run: |
+          cd backend
+          python3 -c "
+from youtube_shorts_crawler import YouTubeShortsCrawler
+print('🚀 크롤링 시작...')
+crawler = YouTubeShortsCrawler()
+videos = crawler.crawl_shorts_trending(200)
+crawler.save_to_cache(videos)
+print(f'✅ 크롤링 완료: {len(videos)}개')
+          "
+          
+      - name: Copy data to frontend
+        run: |
+          cp data/youtube_shorts_cache.json frontend/src/data/realData.json
+          echo "✅ 프론트엔드 데이터 업데이트 완료"
+          
+      - name: Commit and push if changed
+        run: |
+          git config --global user.name 'GitHub Actions'
+          git config --global user.email 'actions@github.com'
+          git add data/youtube_shorts_cache.json frontend/src/data/realData.json
+          git diff --quiet && git diff --staged --quiet || (git commit -m "chore: 자동 크롤링 데이터 업데이트 [skip ci]" && git push)
+

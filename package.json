@@ -1,0 +1,29 @@
+{
+  "name": "content-creator-ai",
+  "version": "1.0.0",
+  "description": "AI 기반 LinkedIn 콘텐츠 자동 생성 플랫폼",
+  "private": true,
+  "scripts": {
+    "start": "./start.sh",
+    "stop": "./stop.sh",
+    "build": "./build.sh",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && source venv/bin/activate && uvicorn main:app --reload --host 0.0.0.0 --port 8000",
+    "dev:frontend": "cd frontend && npm run dev",
+    "setup": "cd backend && python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt && python extract_templates.py && python extract_pdf.py && cd ../frontend && npm install",
+    "extract": "cd backend && source venv/bin/activate && python extract_templates.py && python extract_pdf.py"
+  },
+  "keywords": [
+    "linkedin",
+    "content-creation",
+    "ai",
+    "marketing",
+    "automation",
+    "content-generator"
+  ],
+  "author": "Content Creator AI Team",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

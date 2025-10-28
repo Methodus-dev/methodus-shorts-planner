@@ -1,0 +1,56 @@
+name: Manual Update (최신화 버튼)
+
+on:
+  repository_dispatch:
+    types: [update-shorts-data]
+  workflow_dispatch:  # GitHub에서 수동 실행
+
+jobs:
+  quick-update:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          
+      - name: Install Chrome
+        run: |
+          wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+          echo "deb http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee -a /etc/apt/sources.list.d/google.list
+          sudo apt-get update
+          sudo apt-get install -y google-chrome-stable
+          
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          
+      - name: Run quick crawler (50 videos)
+        run: |
+          cd backend
+          python3 -c "
+from youtube_shorts_crawler import YouTubeShortsCrawler
+print('🚀 빠른 크롤링 시작...')
+crawler = YouTubeShortsCrawler()
+videos = crawler.crawl_shorts_trending(50)
+crawler.save_to_cache(videos)
+print(f'✅ 크롤링 완료: {len(videos)}개')
+          "
+          
+      - name: Copy data to frontend
+        run: |
+          cp data/youtube_shorts_cache.json frontend/src/data/realData.json
+          
+      - name: Commit and push
+        run: |
+          git config --global user.name 'GitHub Actions'
+          git config --global user.email 'actions@github.com'
+          git add data/youtube_shorts_cache.json frontend/src/data/realData.json
+          git commit -m "chore: 수동 크롤링 데이터 업데이트 [skip ci]"
+          git push
+

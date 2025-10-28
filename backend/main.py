@@ -56,8 +56,8 @@ async def startup_event():
                 '요리/음식', '게임', '운동/건강', '교육/학습', '음악'
             ]
             
-            # 카테고리별로 100개씩 수집
-            videos = ytdlp_crawler.get_trending_by_category(main_categories, per_category=100)
+            # 카테고리별로 50개씩 수집 (총 500개)
+            videos = ytdlp_crawler.get_trending_by_category(main_categories, per_category=50)
             
             if videos and len(videos) > 0:
                 ytdlp_crawler.save_to_cache(videos)
@@ -361,10 +361,10 @@ async def get_youtube_trending(
                         '창업/부업', '재테크/금융', '과학기술', '자기계발', '마케팅/비즈니스',
                         '요리/음식', '게임', '운동/건강', '교육/학습', '음악'
                     ]
-                    videos = ytdlp_crawler.get_trending_by_category(main_categories, per_category=100)
+                    videos = ytdlp_crawler.get_trending_by_category(main_categories, per_category=50)
                     if videos:
                         ytdlp_crawler.save_to_cache(videos)
-                        print(f"✅ 즉시 크롤링 완료: {len(videos)}개 (카테고리별 100개씩)")
+                        print(f"✅ 즉시 크롤링 완료: {len(videos)}개 (카테고리별 50개씩)")
                 except Exception as e:
                     print(f"❌ 즉시 크롤링 실패: {e}")
             threading.Thread(target=force_crawl, daemon=True).start()
@@ -491,8 +491,16 @@ def _apply_filters(videos: List[Dict], category: Optional[str], region: Optional
     # 쇼츠/롱폼 필터
     if video_type:
         before = len(filtered)
-        filtered = [v for v in filtered if v.get('video_type', '').strip() == video_type.strip()]
-        print(f"   영상 타입 '{video_type}' 필터: {before}개 → {len(filtered)}개")
+        # 영어 필터를 한글로 변환
+        if video_type == 'shorts':
+            video_type_filter = '쇼츠'
+        elif video_type == 'long':
+            video_type_filter = '롱폼'
+        else:
+            video_type_filter = video_type
+            
+        filtered = [v for v in filtered if v.get('video_type', '').strip() == video_type_filter.strip()]
+        print(f"   영상 타입 '{video_type}' → '{video_type_filter}' 필터: {before}개 → {len(filtered)}개")
     
     # 기간 필터
     if time_filter and time_filter != "all":

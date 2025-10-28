@@ -57,7 +57,7 @@ class YouTubeYTDLPCrawler:
                 print(f"❌ 재시도 실패: {retry_error}")
                 return []
     
-    def get_trending_by_category(self, categories: List[str], per_category: int = 100) -> List[Dict]:
+    def get_trending_by_category(self, categories: List[str], per_category: int = 50) -> List[Dict]:
         """카테고리별로 영상 수집 (한국어 60% + 영어 40%)"""
         all_videos = []
         

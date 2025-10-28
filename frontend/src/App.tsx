@@ -10,7 +10,6 @@ import {
   type CategoryKeywordsResponse
 } from './services/api';
 import VideoFilters from './components/VideoFilters';
-import SchedulerManager from './components/SchedulerManager';
 
 function App() {
   const [trendingVideos, setTrendingVideos] = useState<TrendingVideo[]>([]);
@@ -364,8 +363,6 @@ function App() {
             animate={{ opacity: 1 }}
             className="space-y-6"
           >
-            {/* 스케줄러 관리 */}
-            <SchedulerManager />
             
             <div className="card">
               <h2 className="text-2xl font-bold mb-4">

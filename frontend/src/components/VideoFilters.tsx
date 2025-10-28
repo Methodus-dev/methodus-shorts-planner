@@ -159,9 +159,9 @@ export default function VideoFilters({ filters, onFiltersChange, onApplyFilters,
               전체
             </button>
             <button
-              onClick={() => handleFilterChange('video_type', '쇼츠')}
+              onClick={() => handleFilterChange('video_type', 'shorts')}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                filters.video_type === '쇼츠' 
+                filters.video_type === 'shorts' 
                   ? 'bg-pink-500 text-white' 
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
@@ -170,9 +170,9 @@ export default function VideoFilters({ filters, onFiltersChange, onApplyFilters,
               📱 쇼츠
             </button>
             <button
-              onClick={() => handleFilterChange('video_type', '롱폼')}
+              onClick={() => handleFilterChange('video_type', 'long')}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                filters.video_type === '롱폼' 
+                filters.video_type === 'long' 
                   ? 'bg-purple-500 text-white' 
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}

@@ -4,8 +4,8 @@ from pydantic import BaseModel
 from typing import Optional, List, Dict
 from shorts_planner import ShortsPlannerSystem
 from youtube_trends import YouTubeTrendsAnalyzer
-from youtube_realtime_crawler import YouTubeRealtimeCrawler
-from youtube_shorts_crawler import YouTubeShortsCrawler
+# from youtube_realtime_crawler import YouTubeRealtimeCrawler  # 메모리 부족으로 주석 처리
+# from youtube_shorts_crawler import YouTubeShortsCrawler  # 메모리 부족으로 주석 처리
 from youtube_api_crawler import YouTubeAPIShortsCrawler
 from youtube_ytdlp_crawler import YouTubeYTDLPCrawler
 import json
@@ -32,8 +32,8 @@ app.add_middleware(
 # 쇼츠 플래너 초기화
 planner = ShortsPlannerSystem()
 youtube_analyzer = YouTubeTrendsAnalyzer()
-realtime_crawler = YouTubeRealtimeCrawler()
-shorts_crawler = YouTubeShortsCrawler()
+# realtime_crawler = YouTubeRealtimeCrawler()  # 메모리 부족으로 주석 처리
+# shorts_crawler = YouTubeShortsCrawler()  # 메모리 부족으로 주석 처리
 api_crawler = YouTubeAPIShortsCrawler()  # YouTube Data API v3 크롤러
 ytdlp_crawler = YouTubeYTDLPCrawler()  # yt-dlp 크롤러 (실제 급상승 영상)
 

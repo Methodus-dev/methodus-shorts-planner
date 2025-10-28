@@ -129,21 +129,15 @@ function App() {
     setIsLoading(true);
     setIsAutoRefreshing(true);
     try {
-      console.log('🔄 최신 급상승 영상 크롤링 시작...');
-      alert('🔄 최신 급상승 영상을 크롤링 중입니다...\n잠시만 기다려주세요 (약 30초~1분)');
+      console.log('🔄 최신 데이터 새로고침 시작...');
       
-      // force_refresh=true로 백엔드에서 즉시 크롤링
-      await loadTrendingVideos(true, true);
+      // 최신 데이터 로드 (백엔드에서 자동으로 최신 데이터 반환)
+      await loadTrendingVideos(true);
       
-      // 5초 후 다시 로드 (크롤링 완료 대기)
-      await new Promise(resolve => setTimeout(resolve, 5000));
-      await loadTrendingVideos(true, false);
-      
-      console.log('✅ 최신 데이터 크롤링 완료');
-      alert('✅ 최신 급상승 영상 100개 업데이트 완료!\n쇼츠와 롱폼, 한국어와 영어 영상을 모두 수집했습니다.');
+      console.log('✅ 최신 데이터 로드 완료');
     } catch (error) {
-      console.error('최신 데이터 업데이트 실패:', error);
-      alert('❌ 데이터 업데이트 실패');
+      console.error('❌ 새로고침 오류:', error);
+      alert('❌ 새로고침 중 오류가 발생했습니다.');
     } finally {
       setIsLoading(false);
       setIsAutoRefreshing(false);

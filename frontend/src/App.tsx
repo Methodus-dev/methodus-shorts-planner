@@ -1,6 +1,14 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { SAMPLE_VIDEOS, FILTER_OPTIONS, type TrendingVideo } from './data/sampleVideos';
+import type { TrendingVideo, TrendingVideosResponse } from './services/api';
+import {
+  getYoutubeTrending,
+  analyzeKeywords,
+  getContentIdeas,
+  createContentPlan,
+  getCategoryKeywords,
+  type CategoryKeywordsResponse
+} from './services/api';
 import VideoFilters from './components/VideoFilters';
 
 function App() {
@@ -19,11 +27,12 @@ function App() {
     video_type: '',
     time_filter: 'all'
   });
+  const [videoResponse, setVideoResponse] = useState<TrendingVideosResponse | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
-  const [categoryKeywords, setCategoryKeywords] = useState<any>(null);
+  const [categoryKeywords, setCategoryKeywords] = useState<CategoryKeywordsResponse | null>(null);
   const [isLoadingCategoryKeywords, setIsLoadingCategoryKeywords] = useState(false);
   const [lastUpdateTime, setLastUpdateTime] = useState<string>('');
   const [isAutoRefreshing, setIsAutoRefreshing] = useState(false);
@@ -50,7 +59,7 @@ function App() {
   }, [hasMore, isLoadingMore]);
 
   const loadTrendingVideos = async (reset = true, forceRefresh = false) => {
-    console.log('🔄 정적 데이터 로드 시작:', { reset, forceRefresh, filters });
+    console.log('🔄 실제 크롤링 데이터 로드 시작:', { reset, forceRefresh, filters });
     
     if (reset) {
       setIsLoading(true);
@@ -64,95 +73,43 @@ function App() {
       const pageSize = 20;
       const startIndex = reset ? 0 : (currentPage - 1) * pageSize;
       
-      // 정적 데이터에서 필터링
-      let filteredVideos = [...SAMPLE_VIDEOS];
+      // 필터가 있으면 더 많은 데이터 요청 (무한 스크롤 지원)
+      const requestCount = startIndex + pageSize;
       
-      // 카테고리 필터
-      if (filters.category) {
-        filteredVideos = filteredVideos.filter(v => v.category === filters.category);
-      }
+      console.log('📡 API 호출:', { requestCount, filters });
+      const response = await getYoutubeTrending(requestCount, filters, forceRefresh);
+      console.log('📊 API 응답:', { count: response.count, total: response.total_count });
       
-      // 언어 필터
-      if (filters.language) {
-        filteredVideos = filteredVideos.filter(v => v.language === filters.language);
-      }
+      const allVideos = response.trending_videos;
+      const newVideos = allVideos.slice(startIndex, startIndex + pageSize);
       
-      // 영상 타입 필터
-      if (filters.video_type) {
-        if (filters.video_type === 'shorts') {
-          filteredVideos = filteredVideos.filter(v => v.video_type === '쇼츠');
-        } else if (filters.video_type === 'long') {
-          filteredVideos = filteredVideos.filter(v => v.video_type === '롱폼');
-        }
-      }
-      
-      // 트렌드 점수 필터
-      if (filters.min_trend_score > 0) {
-        filteredVideos = filteredVideos.filter(v => v.trend_score >= filters.min_trend_score);
-      }
-      
-      // 정렬
-      if (filters.sort_by === 'trend_score') {
-        filteredVideos.sort((a, b) => b.trend_score - a.trend_score);
-      } else if (filters.sort_by === 'views') {
-        const parseViews = (views: string) => {
-          if (views.includes('M')) return parseFloat(views.replace('M', '')) * 1000000;
-          if (views.includes('K')) return parseFloat(views.replace('K', '')) * 1000;
-          return parseFloat(views.replace(',', ''));
-        };
-        filteredVideos.sort((a, b) => parseViews(b.views) - parseViews(a.views));
-      }
-      
-      const newVideos = filteredVideos.slice(startIndex, startIndex + pageSize);
-      
-      console.log('📋 필터링된 영상 데이터:', { 
-        total: filteredVideos.length, 
+      console.log('📋 영상 데이터:', { 
+        total: allVideos.length, 
         new: newVideos.length,
-        korean: filteredVideos.filter(v => v.language === '한국어').length,
-        english: filteredVideos.filter(v => v.language === '영어').length
+        korean: allVideos.filter(v => v.language === '한국어').length,
+        english: allVideos.filter(v => v.language === '영어').length
       });
       
       if (reset) {
         setTrendingVideos(newVideos);
+        setVideoResponse(response);
         setLastUpdateTime(new Date().toLocaleString('ko-KR'));
         
-        // 간단한 키워드 분석 (정적 데이터)
-        const analysis = {
-          전체_인기_키워드: [
-            { 키워드: '부업', 추천도: '95%' },
-            { 키워드: '투자', 추천도: '88%' },
-            { 키워드: 'AI', 추천도: '92%' },
-            { 키워드: '요리', 추천도: '78%' },
-            { 키워드: '게임', 추천도: '82%' },
-            { 키워드: '운동', 추천도: '87%' },
-            { 키워드: '영어', 추천도: '80%' },
-            { 키워드: '음악', 추천도: '75%' },
-            { 키워드: '자기계발', 추천도: '86%' },
-            { 키워드: '마케팅', 추천도: '90%' }
-          ],
-          카테고리별_키워드: {
-            '창업/부업': ['부업', '사업', '창업', '수익', '돈벌기'],
-            '재테크/금융': ['투자', '주식', '암호화폐', '부동산', '재테크'],
-            '과학기술': ['AI', 'ChatGPT', '프로그래밍', '기술', '혁신'],
-            '자기계발': ['습관', '목표', '성공', '동기부여', '시간관리'],
-            '마케팅/비즈니스': ['마케팅', '유튜브', '인스타그램', 'SNS', '브랜딩']
-          },
-          트렌드_분석: {
-            핫한_카테고리_TOP3: [
-              { 카테고리: '창업/부업', 영상수: 8, 인기도: '🔥🔥🔥' },
-              { 카테고리: '자기계발', 영상수: 6, 인기도: '🔥🔥' },
-              { 카테고리: '재테크/금융', 영상수: 4, 인기도: '🔥' }
-            ],
-            공통_요소: ['실용성', '단계별 가이드', '초보자 친화적', '구체적 팁']
-          }
-        };
-        setKeywordAnalysis(analysis);
+        // 자동으로 키워드 분석
+        try {
+          const analysis = await analyzeKeywords(allVideos.slice(0, 50));
+          setKeywordAnalysis(analysis);
+        } catch (error) {
+          console.error('키워드 분석 실패:', error);
+          // 키워드 분석 실패 시 사용자에게 알림
+          alert('키워드 분석에 실패했습니다. 잠시 후 다시 시도해주세요.');
+        }
       } else {
         setTrendingVideos(prev => [...prev, ...newVideos]);
       }
       
       // 더 로드할 데이터가 있는지 확인
-      setHasMore(newVideos.length === pageSize && (startIndex + pageSize) < filteredVideos.length);
+      setHasMore(newVideos.length === pageSize && (startIndex + pageSize) < allVideos.length);
       if (reset) {
         setCurrentPage(2);
       } else {
@@ -195,21 +152,7 @@ function App() {
   const loadCategoryKeywords = async (category: string) => {
     setIsLoadingCategoryKeywords(true);
     try {
-      // 정적 데이터로 카테고리 키워드 생성
-      const response = {
-        category: category,
-        total_videos: SAMPLE_VIDEOS.filter(v => v.category === category).length,
-        keywords: [
-          { keyword: '부업', frequency: 5, percentage: 25 },
-          { keyword: '투자', frequency: 4, percentage: 20 },
-          { keyword: 'AI', frequency: 3, percentage: 15 },
-          { keyword: '성공', frequency: 3, percentage: 15 },
-          { keyword: '팁', frequency: 2, percentage: 10 },
-          { keyword: '가이드', frequency: 2, percentage: 10 },
-          { keyword: '초보자', frequency: 1, percentage: 5 }
-        ],
-        last_updated: new Date().toISOString()
-      };
+      const response = await getCategoryKeywords(category);
       setCategoryKeywords(response);
       setSelectedCategory(category);
     } catch (error) {
@@ -263,9 +206,7 @@ function App() {
   };
 
   const handleVideoSelect = (video: TrendingVideo) => {
-    // 정적 데이터에서는 키워드가 없으므로 제목에서 추출
-    const keywords = video.title.split(' ').slice(0, 3);
-    setSelectedKeyword(keywords[0]);
+    setSelectedKeyword(video.keywords?.[0] || video.title.split(' ')[0]);
   };
 
   const handleKeywordClick = async (keyword: string) => {
@@ -274,32 +215,11 @@ function App() {
     
     setIsLoading(true);
     try {
-      console.log(`🔑 키워드 "${keyword}" 선택 - 정적 데이터 플로우 시작`);
+      console.log(`🔑 키워드 "${keyword}" 선택 - 자동 플로우 시작`);
       
-      // 1단계: 정적 아이디어 생성
+      // 1단계: 아이디어 생성
       console.log('💡 1단계: 콘텐츠 아이디어 생성 중...');
-      const ideas = {
-        관련_급상승_영상수: SAMPLE_VIDEOS.filter(v => v.title.includes(keyword)).length,
-        추천_제목_패턴: [
-          `${keyword}로 돈 버는 방법`,
-          `${keyword} 초보자 가이드`,
-          `${keyword} 꿀팁 10가지`,
-          `${keyword} 완벽 정리`
-        ],
-        훅_아이디어: [
-          `${keyword}에 대해 알고 싶다면?`,
-          `${keyword}로 성공한 사람들의 비밀`,
-          `${keyword} 초보자도 할 수 있는 방법`,
-          `${keyword} 전문가가 알려주는 팁`
-        ],
-        콘텐츠_아이디어: [
-          `${keyword} 기초부터 고급까지 완벽 가이드`,
-          `${keyword}로 월 100만원 벌기`,
-          `${keyword} 실전 활용법`,
-          `${keyword} 주의사항과 팁`,
-          `${keyword} 성공 사례 분석`
-        ]
-      };
+      const ideas = await getContentIdeas(keyword);
       setContentIdeas(ideas);
       console.log(`✅ 아이디어 생성 완료: ${ideas.콘텐츠_아이디어?.length || 0}개`);
       
@@ -307,31 +227,11 @@ function App() {
       if (ideas && ideas.콘텐츠_아이디어 && ideas.콘텐츠_아이디어.length > 0) {
         console.log('📋 2단계: 첫 번째 아이디어로 기획서 자동 생성 중...');
         const firstIdea = ideas.콘텐츠_아이디어[0];
-        const plan = {
-          plan: {
-            주제: firstIdea,
-            콘텐츠_타입: 'Actionable',
-            타겟_오디언스: '초보자',
-            콘텐츠_구조: {
-              '인트로 (0-15초)': `${keyword}에 대한 흥미로운 사실이나 통계 제시`,
-              '본문 (15초-끝)': '단계별 가이드와 실전 팁 제공',
-              '아웃트로 (마지막 5초)': '구독과 좋아요 요청'
-            },
-            제목_옵션: [
-              `${keyword} 완벽 가이드 - 초보자도 따라할 수 있는 방법`,
-              `${keyword}로 돈 버는 비밀 공개`,
-              `${keyword} 전문가가 알려주는 꿀팁`
-            ],
-            해시태그: [`#${keyword}`, '#가이드', '#초보자', '#팁', '#성공'],
-            최적화_팁: [
-              '썸네일에 명확한 텍스트 포함',
-              '첫 3초 안에 핵심 내용 제시',
-              '자막과 화면 전환 적극 활용',
-              '시청자 참여 유도 질문 포함'
-            ]
-          },
-          generated_at: new Date().toLocaleString('ko-KR')
-        };
+        const plan = await createContentPlan({
+          topic: firstIdea,
+          content_type: 'Actionable',
+          target_audience: undefined
+        });
         setContentPlan(plan);
         console.log('✅ 기획서 자동 생성 완료!');
         console.log('🎉 키워드 → 아이디어 → 기획서 자동 플로우 완료!');
@@ -531,31 +431,35 @@ function App() {
               />
               
               {/* 필터 결과 정보 */}
-              <div className="mb-4 p-3 bg-blue-50 rounded-lg">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm text-blue-800">
-                    📊 총 {SAMPLE_VIDEOS.length}개 중 {trendingVideos.length}개 표시
-                    <span className="ml-2">
-                      • 마지막 업데이트: {lastUpdateTime}
-                    </span>
-                  </p>
-                  {lastUpdateTime && (
-                    <div className="flex items-center gap-2 text-xs text-green-600">
-                      {isAutoRefreshing ? (
-                        <>
-                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-green-600"></div>
-                          <span>실시간 업데이트 중...</span>
-                        </>
-                      ) : (
-                        <>
-                          <span>🔄</span>
-                          <span>로컬 업데이트: {lastUpdateTime}</span>
-                        </>
+              {videoResponse && (
+                <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-blue-800">
+                      📊 총 {videoResponse.total_count || videoResponse.count}개 중 {videoResponse.count}개 표시
+                      {videoResponse.filters_applied && (
+                        <span className="ml-2">
+                          • 마지막 업데이트: {new Date(videoResponse.last_updated).toLocaleString('ko-KR')}
+                        </span>
                       )}
-                    </div>
-                  )}
+                    </p>
+                    {lastUpdateTime && (
+                      <div className="flex items-center gap-2 text-xs text-green-600">
+                        {isAutoRefreshing ? (
+                          <>
+                            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-green-600"></div>
+                            <span>실시간 업데이트 중...</span>
+                          </>
+                        ) : (
+                          <>
+                            <span>🔄</span>
+                            <span>로컬 업데이트: {lastUpdateTime}</span>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {trendingVideos.map((video, idx) => (
@@ -633,7 +537,7 @@ function App() {
 
                     {/* 키워드 */}
                     <div className="flex flex-wrap gap-1 mb-3">
-                      {video.title.split(' ').slice(0, 3).map((kw, kidx) => (
+                      {(video.keywords || video.title.split(' ').slice(0, 3)).slice(0, 3).map((kw, kidx) => (
                         <span
                           key={kidx}
                           className="px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded"
@@ -645,7 +549,7 @@ function App() {
 
                     {/* 바이럴 이유 */}
                     <div className="text-xs text-gray-500 border-t border-gray-200 pt-2 mb-3">
-                      💡 실용적인 정보와 단계별 가이드로 인기
+                      💡 {video.why_viral || '실용적인 정보와 단계별 가이드로 인기'}
                     </div>
 
                     {/* YouTube 링크 - 영상 타입에 따라 적절한 버튼만 표시 */}
@@ -713,7 +617,7 @@ function App() {
               </p>
               
               <div className="flex flex-wrap gap-3">
-                {keywordAnalysis.전체_인기_키워드?.slice(0, 15).map((kwData: any, idx: number) => (
+                {keywordAnalysis.전체_인기_키워드?.slice(0, 15).map((kwData: {키워드: string, 추천도: string}, idx: number) => (
                   <button
                     key={idx}
                     onClick={() => handleKeywordClick(kwData.키워드)}
@@ -768,7 +672,7 @@ function App() {
                         🔥 {selectedCategory} 카테고리 핫 키워드 ({categoryKeywords.total_videos}개 영상 분석)
                       </h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {categoryKeywords.keywords.slice(0, 15).map((kwData, idx) => (
+                        {categoryKeywords.keywords.slice(0, 15).map((kwData: {keyword: string, frequency: number, percentage: number}, idx: number) => (
                           <button
                             key={idx}
                             onClick={() => handleKeywordClick(kwData.keyword)}
@@ -1068,31 +972,11 @@ function App() {
                             onClick={async () => {
                               setIsLoading(true);
                               try {
-                                const plan = {
-                                  plan: {
-                                    주제: idea,
-                                    콘텐츠_타입: 'Actionable',
-                                    타겟_오디언스: '초보자',
-                                    콘텐츠_구조: {
-                                      '인트로 (0-15초)': `${idea}에 대한 흥미로운 사실이나 통계 제시`,
-                                      '본문 (15초-끝)': '단계별 가이드와 실전 팁 제공',
-                                      '아웃트로 (마지막 5초)': '구독과 좋아요 요청'
-                                    },
-                                    제목_옵션: [
-                                      `${idea} 완벽 가이드 - 초보자도 따라할 수 있는 방법`,
-                                      `${idea}로 돈 버는 비밀 공개`,
-                                      `${idea} 전문가가 알려주는 꿀팁`
-                                    ],
-                                    해시태그: [`#${idea}`, '#가이드', '#초보자', '#팁', '#성공'],
-                                    최적화_팁: [
-                                      '썸네일에 명확한 텍스트 포함',
-                                      '첫 3초 안에 핵심 내용 제시',
-                                      '자막과 화면 전환 적극 활용',
-                                      '시청자 참여 유도 질문 포함'
-                                    ]
-                                  },
-                                  generated_at: new Date().toLocaleString('ko-KR')
-                                };
+                                const plan = await createContentPlan({
+                                  topic: idea,
+                                  content_type: 'Actionable',
+                                  target_audience: undefined
+                                });
                                 setContentPlan(plan);
                                 setCurrentView('plan');
                                 console.log('✅ 기획서 생성 완료');

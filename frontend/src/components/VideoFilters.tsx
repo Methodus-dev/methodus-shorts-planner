@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react';
-import type { FilterOptions } from '../services/api';
+import { useState } from 'react';
 
 interface VideoFiltersProps {
   filters: {
@@ -26,22 +25,32 @@ interface VideoFiltersProps {
 }
 
 export default function VideoFilters({ filters, onFiltersChange, onApplyFilters, onResetFilters, isLoading }: VideoFiltersProps) {
-  const [filterOptions, setFilterOptions] = useState<FilterOptions | null>(null);
-  // 로컬 state 제거 - 부모로부터 받은 filters 사용
   const [isExpanded, setIsExpanded] = useState(true); // 기본적으로 열린 상태
 
-  useEffect(() => {
-    loadFilterOptions();
-  }, []);
-
-  const loadFilterOptions = async () => {
-    try {
-      const { getFilterOptions } = await import('../services/api');
-      const options = await getFilterOptions();
-      setFilterOptions(options);
-    } catch (error) {
-      console.error('필터 옵션 로드 실패:', error);
-    }
+  // 정적 필터 옵션 정의
+  const filterOptions = {
+    categories: [
+      "창업/부업", "재테크/금융", "과학기술", "자기계발", "마케팅/비즈니스",
+      "요리/음식", "게임", "운동/건강", "교육/학습", "음악"
+    ],
+    regions: ['국내', '해외'],
+    languages: ['한국어', '영어'],
+    sort_options: [
+      { value: 'trend_score', label: '🔥 트렌드 점수' },
+      { value: 'views', label: '👁️ 조회수' },
+      { value: 'crawled_at', label: '⏰ 최신순' }
+    ],
+    time_filter_options: [
+      { value: 'all', label: '전체' },
+      { value: 'today', label: '오늘 (24시간)' },
+      { value: 'week', label: '이번 주 (7일)' },
+      { value: 'month', label: '이번 달 (30일)' }
+    ],
+    video_type_options: [
+      { value: '', label: '전체' },
+      { value: 'shorts', label: '📱 쇼츠' },
+      { value: 'long', label: '🎥 롱폼' }
+    ]
   };
 
   const handleFilterChange = (key: string, value: string | number) => {
@@ -83,29 +92,7 @@ export default function VideoFilters({ filters, onFiltersChange, onApplyFilters,
     console.log('🔍 필터 적용 완료, 상태 유지:', filters);
   };
 
-  // filterOptions가 없어도 기본 필터 UI 표시
-  const defaultFilterOptions = {
-    categories: ['일반', '엔터테인먼트', '교육', '뉴스', '스포츠', '음악', '게임', '과학기술'],
-    regions: ['국내', '해외'],
-    sort_options: [
-      { value: 'trend_score', label: '🔥 트렌드 점수' },
-      { value: 'views', label: '👁️ 조회수' },
-      { value: 'recent', label: '⏰ 최신순' }
-    ],
-    time_filter_options: [
-      { value: 'all', label: '전체' },
-      { value: 'today', label: '오늘 (24시간)' },
-      { value: 'week', label: '이번 주 (7일)' },
-      { value: 'month', label: '이번 달 (30일)' }
-    ],
-    video_type_options: [
-      { value: '', label: '전체' },
-      { value: '쇼츠', label: '📱 쇼츠' },
-      { value: '롱폼', label: '🎥 롱폼' }
-    ]
-  };
-
-  const options = filterOptions || defaultFilterOptions;
+  const options = filterOptions;
 
   return (
     <div className="bg-white rounded-lg shadow-md p-4 mb-6">
@@ -225,8 +212,44 @@ export default function VideoFilters({ filters, onFiltersChange, onApplyFilters,
           </select>
         </div>
 
-        {/* 언어 필터 제거됨 */}
-        {/* 트렌드 점수 필터 제거됨 */}
+        {/* 언어 필터 */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            🗣️ 언어
+          </label>
+          <select
+            value={filters.language}
+            onChange={(e) => handleFilterChange('language', e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={isLoading}
+          >
+            <option value="">전체</option>
+            {options.languages.map((language) => (
+              <option key={language} value={language}>
+                {language === '한국어' ? '🇰🇷 한국어' : '🇺🇸 영어'}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* 트렌드 점수 필터 */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            📈 최소 트렌드 점수
+          </label>
+          <select
+            value={filters.min_trend_score}
+            onChange={(e) => handleFilterChange('min_trend_score', parseInt(e.target.value))}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={isLoading}
+          >
+            <option value={0}>전체</option>
+            <option value={50}>50점 이상</option>
+            <option value={70}>70점 이상</option>
+            <option value={80}>80점 이상</option>
+            <option value={90}>90점 이상</option>
+          </select>
+        </div>
 
         {/* 정렬 옵션 */}
         <div>
@@ -270,7 +293,7 @@ export default function VideoFilters({ filters, onFiltersChange, onApplyFilters,
       <div className="mt-4 flex flex-wrap gap-2">
         {filters.video_type && (
           <span className="px-2 py-1 bg-pink-100 text-pink-800 text-xs rounded-full">
-            🎬 {filters.video_type}
+            🎬 {filters.video_type === 'shorts' ? '쇼츠' : filters.video_type === 'long' ? '롱폼' : filters.video_type}
           </span>
         )}
         {filters.category && (
@@ -283,7 +306,12 @@ export default function VideoFilters({ filters, onFiltersChange, onApplyFilters,
             🌍 {filters.region}
           </span>
         )}
-        {filters.min_trend_score > 50 && (
+        {filters.language && (
+          <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">
+            🗣️ {filters.language}
+          </span>
+        )}
+        {filters.min_trend_score > 0 && (
           <span className="px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded-full">
             📈 {filters.min_trend_score}+ 점
           </span>

@@ -13,6 +13,7 @@ export interface TrendingVideo {
   thumbnail: string;
   trend_score: number;
   crawled_at: string;
+  region?: string;
 }
 
 export const SAMPLE_VIDEOS: TrendingVideo[] = [
@@ -25,7 +26,8 @@ export const SAMPLE_VIDEOS: TrendingVideo[] = [
     youtube_url: "https://www.youtube.com/watch?v=2SLSser4y6U",
     thumbnail: "💼",
     trend_score: 95,
-    crawled_at: new Date().toISOString()
+    crawled_at: new Date().toISOString(),
+    region: "해외"
   },
   {
     title: "부업으로 월 100만원 벌기",
@@ -36,7 +38,8 @@ export const SAMPLE_VIDEOS: TrendingVideo[] = [
     youtube_url: "https://www.youtube.com/shorts/abc123",
     thumbnail: "💰",
     trend_score: 88,
-    crawled_at: new Date().toISOString()
+    crawled_at: new Date().toISOString(),
+    region: "국내"
   },
   {
     title: "AI로 돈 버는 방법 2025",
@@ -47,7 +50,8 @@ export const SAMPLE_VIDEOS: TrendingVideo[] = [
     youtube_url: "https://www.youtube.com/watch?v=def456",
     thumbnail: "🤖",
     trend_score: 92,
-    crawled_at: new Date().toISOString()
+    crawled_at: new Date().toISOString(),
+    region: "국내"
   },
   {
     title: "주식 투자 초보자 가이드",

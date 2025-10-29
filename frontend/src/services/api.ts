@@ -2,7 +2,7 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL 
   ? `${import.meta.env.VITE_API_URL}/api`
   : (import.meta.env.PROD 
-      ? 'https://methodus-backend.onrender.com'  // Production: Render 배포 서버
+      ? 'https://methodus-shorts-planner.vercel.app'  // Production: Vercel 배포 서버
       : 'http://localhost:8000/api');  // Development: 로컬 서버 (포트 8000)
 
 // 실제 크롤링 데이터만 사용

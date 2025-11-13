@@ -5,24 +5,26 @@ import type { CategoryKeywordsResponse } from './services/api';
 import { getYoutubeTrending } from './services/api';
 import VideoFilters from './components/VideoFilters';
 
-// TrendingVideo 타입 정의
+// TrendingVideo 타입 정의 (api.ts와 통일)
 interface TrendingVideo {
   title: string;
   views: string;
   category: string;
-  language: string;
-  video_type: string;
+  language?: string;
+  video_type?: string;
   youtube_url: string;
   thumbnail: string;
-  trend_score: number;
-  crawled_at: string;
-  published_at?: string;  // 영상 업로드 날짜
+  trend_score?: number;
+  crawled_at?: string;
+  published_at?: string;
   region?: string;
   keywords?: string[];
   why_viral?: string;
   engagement?: string;
   video_id?: string;
   shorts_url?: string;
+  is_shorts?: boolean;
+  duration?: number;
 }
 
 function App() {
@@ -89,10 +91,6 @@ function App() {
     };
   };
 
-  const handleContentPlanSubmit = async (contentData: any) => {
-    // TODO: 콘텐츠 계획 제출 로직 구현
-    console.log('콘텐츠 계획 제출:', contentData);
-  };
 
   useEffect(() => {
     loadTrendingVideos();

@@ -191,15 +191,37 @@ function App() {
     setIsLoading(true);
     setIsAutoRefreshing(true);
     try {
-      console.log('🔄 최신 데이터 새로고침 시작...');
+      console.log('🔄 백엔드에 최신 데이터 수집 요청...');
       
-      // 최신 데이터 로드 (백엔드에서 자동으로 최신 데이터 반환)
+      // 1. 백엔드에 YouTube API로부터 최신 데이터 수집 요청
+      const API_BASE_URL = import.meta.env.VITE_API_URL 
+        ? import.meta.env.VITE_API_URL
+        : (import.meta.env.PROD 
+            ? 'https://methodus-backend.onrender.com'
+            : 'http://localhost:8000');
+      
+      const refreshResponse = await fetch(`${API_BASE_URL}/api/youtube/force-refresh`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!refreshResponse.ok) {
+        throw new Error('백엔드 새로고침 실패');
+      }
+      
+      const refreshData = await refreshResponse.json();
+      console.log('✅ 백엔드 데이터 수집 완료:', refreshData.message);
+      
+      // 2. 최신 데이터 로드
       await loadTrendingVideos(true);
       
-      console.log('✅ 최신 데이터 로드 완료');
+      console.log('✅ 화면 업데이트 완료');
+      alert(`✅ 최신 데이터로 업데이트되었습니다!\n${refreshData.message}`);
     } catch (error) {
       console.error('❌ 새로고침 오류:', error);
-      alert('❌ 새로고침 중 오류가 발생했습니다.');
+      alert('❌ 새로고침 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
     } finally {
       setIsLoading(false);
       setIsAutoRefreshing(false);

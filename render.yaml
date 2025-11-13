@@ -10,3 +10,10 @@ services:
         value: 8000
       - key: PYTHON_VERSION
         value: 3.11.0
+      - key: YOUTUBE_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: CORS_ORIGINS
+        value: "*"
+

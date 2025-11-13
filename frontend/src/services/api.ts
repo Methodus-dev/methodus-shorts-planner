@@ -2,8 +2,8 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL 
   ? `${import.meta.env.VITE_API_URL}/api`
   : (import.meta.env.PROD 
-      ? 'https://methodus-shorts-planner.vercel.app'  // Production: Vercel 배포 서버
-      : 'http://localhost:8000/api');  // Development: 로컬 서버 (포트 8000)
+      ? 'https://methodus-backend.onrender.com'  // Production: Render 배포 서버
+      : 'http://localhost:8000');  // Development: 로컬 서버 (포트 8000)
 
 // 실제 크롤링 데이터만 사용
 
@@ -191,14 +191,15 @@ export interface TrendingVideo {
   title: string;
   category: string;
   views: string;
-  engagement: string;
-  keywords: string[];
+  engagement?: string;
+  keywords?: string[];
   thumbnail: string;
-  why_viral: string;
-  video_id: string;
+  why_viral?: string;
+  video_id?: string;
   youtube_url: string;
-  shorts_url: string;
+  shorts_url?: string;
   crawled_at?: string;
+  published_at?: string;  // 영상 업로드 날짜 (YouTube 업로드 날짜)
   region?: string;
   language?: string;
   trend_score?: number;
@@ -276,16 +277,14 @@ export async function getYoutubeTrending(
       const params = new URLSearchParams({
         count: count.toString(),
         ...(filters?.category && { category: filters.category }),
-        ...(filters?.region && { region: filters.region }),
-        // min_trend_score 필터 제거됨
+        ...(filters?.language && { language: filters.language }),
         ...(filters?.sort_by && { sort_by: filters.sort_by }),
         ...(filters?.video_type && { video_type: filters.video_type }),
-        ...(filters?.time_filter && { time_filter: filters.time_filter }),
         ...(forceRefresh && { force_refresh: 'true' })
       });
       
-      console.log(`🔍 API 호출: ${API_BASE_URL}/youtube/trending?${params}`);
-      const response = await fetch(`${API_BASE_URL}/youtube/trending?${params}`);
+      console.log(`🔍 API 호출: ${API_BASE_URL}/api/youtube/trending?${params}`);
+      const response = await fetch(`${API_BASE_URL}/api/youtube/trending?${params}`);
       
       if (!response.ok) {
         throw new Error(`API 호출 실패: ${response.status}`);
@@ -317,14 +316,9 @@ export async function getYoutubeTrending(
     filteredVideos = filteredVideos.filter(v => v.category === filters.category);
     console.log(`📂 카테고리 필터 (${filters.category}): ${filteredVideos.length}개`);
   }
-  if (filters?.region) {
-    filteredVideos = filteredVideos.filter(v => v.region === filters.region);
-    console.log(`🌍 지역 필터 (${filters.region}): ${filteredVideos.length}개`);
-  }
-  // 언어 필터 제거됨
-  if (filters?.min_trend_score) {
-    filteredVideos = filteredVideos.filter(v => (v.trend_score || 0) >= (filters.min_trend_score || 0));
-    console.log(`📈 트렌드 점수 필터 (${filters.min_trend_score}+): ${filteredVideos.length}개`);
+  if (filters?.language) {
+    filteredVideos = filteredVideos.filter(v => v.language === filters.language);
+    console.log(`🗣️ 언어 필터 (${filters.language}): ${filteredVideos.length}개`);
   }
   if (filters?.video_type) {
     filteredVideos = filteredVideos.filter(v => v.video_type === filters.video_type);
@@ -361,7 +355,7 @@ export async function getYoutubeTrending(
 }
 
 export async function getFilterOptions(): Promise<FilterOptions> {
-  const response = await fetch(`${API_BASE_URL}/youtube/filter-options`);
+  const response = await fetch(`${API_BASE_URL}/api/youtube/filter-options`);
   
   if (!response.ok) {
     throw new Error('필터 옵션 조회에 실패했습니다');
@@ -372,7 +366,7 @@ export async function getFilterOptions(): Promise<FilterOptions> {
 
 export async function analyzeKeywords(videos?: TrendingVideo[]) {
   try {
-    const response = await fetch(`${API_BASE_URL}/youtube/analyze-keywords`, {
+    const response = await fetch(`${API_BASE_URL}/api/youtube/analyze-keywords`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ videos: videos || [] }),
@@ -392,7 +386,7 @@ export async function analyzeKeywords(videos?: TrendingVideo[]) {
 
 export async function getContentIdeas(keyword: string) {
   try {
-    const response = await fetch(`${API_BASE_URL}/youtube/content-ideas`, {
+    const response = await fetch(`${API_BASE_URL}/api/youtube/content-ideas`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ keyword }),
@@ -411,7 +405,7 @@ export async function getContentIdeas(keyword: string) {
 }
 
 export async function getPostingTimes() {
-  const response = await fetch(`${API_BASE_URL}/youtube/posting-times`);
+  const response = await fetch(`${API_BASE_URL}/api/youtube/posting-times`);
   
   if (!response.ok) {
     throw new Error('업로드 시간 조회에 실패했습니다');
@@ -423,7 +417,7 @@ export async function getPostingTimes() {
 // 강제 새로고침 API
 export async function refreshTrendingData() {
   try {
-    const response = await fetch(`${API_BASE_URL}/youtube/refresh`, {
+    const response = await fetch(`${API_BASE_URL}/api/youtube/refresh`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' }
     });
@@ -454,7 +448,7 @@ export interface CategoryKeywordsResponse {
 }
 
 export async function getCategoryKeywords(category: string): Promise<CategoryKeywordsResponse> {
-  const response = await fetch(`${API_BASE_URL}/youtube/category-keywords/${encodeURIComponent(category)}`);
+  const response = await fetch(`${API_BASE_URL}/api/youtube/category-keywords/${encodeURIComponent(category)}`);
   
   if (!response.ok) {
     throw new Error('카테고리 키워드 분석에 실패했습니다');

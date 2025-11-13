@@ -1,6 +1,6 @@
 """
-Methodus Shorts Planner - 실제 크롤링 백엔드
-YouTube 데이터를 실제로 크롤링하여 제공
+Methodus Shorts Planner - YouTube Data API v3 백엔드
+YouTube 데이터를 공식 API를 통해 제공
 """
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -12,12 +12,17 @@ from pathlib import Path
 import os
 import threading
 import time
-from youtube_ytdlp_crawler import YouTubeYtDlpCrawler
+from youtube_api_service import YouTubeAPIService
+import google.generativeai as genai
+from dotenv import load_dotenv
+
+# 환경 변수 로드
+load_dotenv()
 
 app = FastAPI(
     title="Methodus Shorts Planner API",
-    description="YouTube 급상승 영상 분석 API - 실제 크롤링 데이터",
-    version="2.0.0"
+    description="YouTube 급상승 영상 분석 API - YouTube Data API v3",
+    version="3.0.0"
 )
 
 # CORS 설정
@@ -40,6 +45,7 @@ class TrendingVideo(BaseModel):
     thumbnail: str
     trend_score: int
     crawled_at: str
+    published_at: Optional[str] = None  # 영상 업로드 날짜
     region: Optional[str] = None
     keywords: Optional[List[str]] = None
     why_viral: Optional[str] = None
@@ -53,70 +59,132 @@ class TrendingVideosResponse(BaseModel):
     source: str
 
 # 크롤러 초기화
-ytdlp_crawler = YouTubeYtDlpCrawler()
+# crawler = SimpleYouTubeCrawler()
 
-# 자동 크롤링 설정
-def auto_crawl_loop():
-    """2시간마다 자동 크롤링"""
-    while True:
-        try:
-            print(f"🔄 [{datetime.now().strftime('%H:%M:%S')}] 자동 크롤링 시작...")
-            
-            main_categories = [
-                '창업/부업', '재테크/금융', '과학기술', '자기계발', '마케팅/비즈니스',
-                '요리/음식', '게임', '운동/건강', '교육/학습', '음악'
-            ]
-            
-            # 카테고리별로 30개씩 수집 (총 300개)
-            videos = ytdlp_crawler.get_trending_by_category(main_categories, per_category=30)
-            
-            if videos and len(videos) > 0:
-                ytdlp_crawler.save_to_cache(videos)
-                print(f"✅ 자동 크롤링 완료: {len(videos)}개 영상 업데이트")
-            else:
-                print("⚠️ 자동 크롤링 실패")
-                
-        except Exception as e:
-            print(f"❌ 자동 크롤링 오류: {e}")
-        
-        # 2시간 대기
-        time.sleep(2 * 60 * 60)
+# YouTube API 서비스 초기화
+try:
+    youtube_service = YouTubeAPIService()
+    print("✅ YouTube API 서비스 초기화 완료")
+except ValueError as e:
+    print(f"⚠️ YouTube API 초기화 실패: {e}")
+    print("💡 .env 파일에 YOUTUBE_API_KEY를 설정하세요.")
+    print("   설정 방법은 YOUTUBE_API_SETUP.md를 참조하세요.")
+    youtube_service = None
 
-# 서버 시작 시 초기 크롤링
-def initial_crawl():
-    """서버 시작 시 초기 크롤링"""
-    time.sleep(5)  # 서버 시작 후 5초 대기
+# Google Gemini 초기화
+gemini_api_key = os.getenv("GEMINI_API_KEY")
+gemini_model = None
+if gemini_api_key:
     try:
-        print("🎬 초기 크롤링 시작...")
+        genai.configure(api_key=gemini_api_key)
+        gemini_model = genai.GenerativeModel('gemini-2.0-flash')  # 무료 최신 모델
+        print("✅ Google Gemini 2.0 Flash 초기화 완료 (무료!)")
+    except Exception as e:
+        print(f"⚠️ Gemini API 초기화 실패: {e}")
+        gemini_model = None
+else:
+    print("⚠️ GEMINI_API_KEY가 설정되지 않았습니다 (선택사항)")
+
+# 캐시된 데이터 저장소
+cached_videos = []
+last_update_time = None
+
+def save_cache_to_file(videos):
+    """캐시 데이터를 파일에 저장"""
+    try:
+        cache_data = {
+            'videos': videos,
+            'last_updated': datetime.now().isoformat(),
+            'count': len(videos)
+        }
         
-        main_categories = [
-            '창업/부업', '재테크/금융', '과학기술', '자기계발', '마케팅/비즈니스',
-            '요리/음식', '게임', '운동/건강', '교육/학습', '음악'
-        ]
+        cache_file = Path('video_cache.json')
+        with open(cache_file, 'w', encoding='utf-8') as f:
+            json.dump(cache_data, f, ensure_ascii=False, indent=2)
         
-        videos = ytdlp_crawler.get_trending_by_category(main_categories, per_category=30)
+        print(f"💾 캐시 저장 완료: {len(videos)}개 영상")
+        return True
+    except Exception as e:
+        print(f"❌ 캐시 저장 실패: {e}")
+        return False
+
+def load_cache_from_file():
+    """파일에서 캐시 데이터 로드"""
+    try:
+        cache_file = Path('video_cache.json')
+        if cache_file.exists():
+            with open(cache_file, 'r', encoding='utf-8') as f:
+                cache_data = json.load(f)
+            return cache_data.get('videos', []), cache_data.get('last_updated')
+    except Exception as e:
+        print(f"❌ 캐시 로드 실패: {e}")
+    return [], None
+
+def fetch_youtube_data():
+    """YouTube API를 통해 데이터 수집"""
+    global cached_videos, last_update_time
+    
+    if not youtube_service:
+        print("❌ YouTube API 서비스가 초기화되지 않았습니다.")
+        return False
+    
+    try:
+        print(f"🔄 [{datetime.now().strftime('%H:%M:%S')}] YouTube API 데이터 수집 시작...")
+        
+        # 카테고리별로 여러 지역에서 종합 데이터 수집
+        videos = youtube_service.get_comprehensive_data(
+            region_codes=['KR', 'US', 'JP'],  # 한국, 미국, 일본
+            min_videos_per_category=100
+        )
         
         if videos and len(videos) > 0:
-            ytdlp_crawler.save_to_cache(videos)
-            print(f"✅ 초기 크롤링 완료: {len(videos)}개 영상 수집")
+            cached_videos = videos
+            last_update_time = datetime.now().isoformat()
+            
+            # 캐시 저장
+            save_cache_to_file(videos)
+            
+            print(f"✅ YouTube API 데이터 수집 완료: {len(videos)}개 영상")
+            return True
         else:
-            print("⚠️ 초기 크롤링 실패")
+            print("⚠️ 수집된 데이터가 없습니다")
+            return False
             
     except Exception as e:
-        print(f"❌ 초기 크롤링 오류: {e}")
+        print(f"❌ YouTube API 데이터 수집 오류: {e}")
+        return False
 
-# 백그라운드에서 크롤링 시작
-threading.Thread(target=initial_crawl, daemon=True).start()
-threading.Thread(target=auto_crawl_loop, daemon=True).start()
+# 자동 데이터 수집 설정 (2시간마다)
+def auto_fetch_loop():
+    """2시간마다 자동으로 YouTube 데이터 수집"""
+    while True:
+        time.sleep(2 * 60 * 60)  # 2시간
+        fetch_youtube_data()
+
+# 초기 데이터 로드
+print("🔄 초기 데이터 로드 중...")
+cached_videos, last_update_time = load_cache_from_file()
+
+# 캐시된 데이터가 없으면 즉시 수집
+if not cached_videos and youtube_service:
+    print("📡 캐시된 데이터가 없어서 즉시 데이터 수집을 시작합니다...")
+    fetch_youtube_data()
+
+# 백그라운드에서 자동 데이터 수집 시작
+if youtube_service:
+    threading.Thread(target=auto_fetch_loop, daemon=True).start()
+    print("✅ 자동 데이터 수집 스레드 시작 (2시간 간격)")
 
 @app.get("/")
 async def root():
     """Root endpoint"""
     return {
-        "message": "Methodus Shorts Planner API - 실제 크롤링 데이터",
-        "version": "2.0.0",
+        "message": "Methodus Shorts Planner API - YouTube Data API v3",
+        "version": "3.0.0",
         "status": "running",
-        "docs": "/docs"
+        "api_status": "active" if youtube_service else "not_configured",
+        "docs": "/docs",
+        "setup_guide": "YOUTUBE_API_SETUP.md"
     }
 
 @app.get("/api/health")
@@ -126,7 +194,10 @@ async def health_check():
         "status": "healthy",
         "timestamp": datetime.now().isoformat(),
         "service": "methodus-shorts-planner",
-        "version": "2.0.0"
+        "version": "3.0.0",
+        "youtube_api": "active" if youtube_service else "not_configured",
+        "cached_videos": len(cached_videos) if cached_videos else 0,
+        "last_update": last_update_time
     }
 
 @app.get("/api/youtube/trending", response_model=TrendingVideosResponse)
@@ -140,13 +211,20 @@ async def get_youtube_trending(
     video_type: Optional[str] = None,
     time_filter: Optional[str] = None
 ):
-    """YouTube 급상승 동영상 조회 (실제 크롤링 데이터)"""
+    """YouTube 급상승 동영상 조회 (YouTube Data API v3)"""
+    global cached_videos, last_update_time
+    
     try:
-        # 캐시된 데이터 로드
-        cached_videos = ytdlp_crawler.load_from_cache()
+        # 캐시된 데이터가 없으면 즉시 수집
+        if not cached_videos and youtube_service:
+            print("📡 캐시된 데이터가 없어서 즉시 데이터 수집을 시작합니다...")
+            fetch_youtube_data()
+        
+        # 캐시된 데이터 사용
+        cached_videos = cached_videos if cached_videos else []
         
         if not cached_videos or len(cached_videos) == 0:
-            # 캐시가 없으면 샘플 데이터 반환
+            # 데이터가 없으면 빈 응답 반환
             return TrendingVideosResponse(
                 trending_videos=[],
                 count=0,
@@ -184,9 +262,13 @@ async def get_youtube_trending(
         if min_trend_score:
             filtered_videos = [v for v in filtered_videos if v.get('trend_score', 0) >= min_trend_score]
         
-        # 정렬
+        # 정렬 (한국어 콘텐츠 우선)
         if sort_by == "trend_score":
-            filtered_videos.sort(key=lambda x: x.get('trend_score', 0), reverse=True)
+            # 한국어 콘텐츠를 우선적으로 정렬
+            filtered_videos.sort(key=lambda x: (
+                x.get('language') != '한국어',  # 한국어가 아니면 True (뒤로)
+                -x.get('trend_score', 0)  # 트렌드 점수 높은 순
+            ))
         elif sort_by == "views":
             def parse_views(views_str):
                 if 'M' in str(views_str):
@@ -209,8 +291,8 @@ async def get_youtube_trending(
             trending_videos=final_videos,
             count=len(final_videos),
             total_count=len(filtered_videos),
-            last_updated=datetime.now().isoformat(),
-            source="crawled_data"
+            last_updated=last_update_time or datetime.now().isoformat(),
+            source="youtube_api_v3"
         )
         
     except Exception as e:
@@ -219,11 +301,19 @@ async def get_youtube_trending(
 
 @app.get("/api/youtube/filter-options")
 async def get_filter_options():
-    """사용 가능한 필터 옵션 제공"""
+    """사용 가능한 필터 옵션 제공 (실제 데이터 기반)"""
+    # 실제 캐시된 데이터에서 카테고리 추출
+    unique_categories = set()
+    if cached_videos:
+        for video in cached_videos:
+            cat = video.get('category')
+            if cat:
+                unique_categories.add(cat)
+    
     return {
-        "categories": [
-            "창업/부업", "재테크/금융", "과학기술", "자기계발", "마케팅/비즈니스",
-            "요리/음식", "게임", "운동/건강", "교육/학습", "음악"
+        "categories": sorted(list(unique_categories)) if unique_categories else [
+            "마케팅/비즈니스", "게임", "재테크/금융", "음악", "운동/건강",
+            "자기계발", "과학기술", "엔터테인먼트", "교육/학습", "기타"
         ],
         "regions": ["국내", "해외"],
         "languages": ["한국어", "영어"],
@@ -239,25 +329,106 @@ async def get_filter_options():
         }
     }
 
+@app.post("/api/ai/generate-title-patterns")
+async def generate_title_patterns(request: dict):
+    """Google Gemini AI를 사용해서 키워드에 맞는 제목 패턴 생성"""
+    keyword = request.get('keyword', '')
+    related_videos = request.get('related_videos', [])
+    
+    if not gemini_model:
+        # Gemini가 없으면 기본 패턴 반환
+        return {
+            "title_patterns": [
+                f"{keyword} 완벽 가이드",
+                f"{keyword} 핵심 정리",
+                f"{keyword} 실전 활용법",
+                f"{keyword} 트렌드 분석"
+            ],
+            "source": "default"
+        }
+    
+    try:
+        # 관련 영상 제목들을 문맥으로 제공
+        video_titles_context = "\n".join([f"- {v['title']}" for v in related_videos[:10]]) if related_videos else "관련 영상 없음"
+        
+        # Google Gemini로 맞춤형 제목 패턴 생성
+        prompt = f"""다음은 YouTube에서 급상승 중인 '{keyword}' 관련 영상들입니다:
+
+{video_titles_context}
+
+위 영상들의 패턴을 분석하여, '{keyword}'를 활용한 유튜브 콘텐츠 제목을 4개만 생성해주세요.
+
+중요 규칙:
+1. 실제 급상승 영상들의 스타일과 패턴을 정확히 따라야 합니다
+2. 키워드가 인물명(연예인, 유명인)이면 인물 관련 콘텐츠만 (근황, 무대, 인터뷰, 화제의 순간)
+3. 키워드가 기술/도구면 사용법, 가이드 형식
+4. 키워드가 일반 주제면 정보/팁 형식
+5. "~로 돈 버는 방법" 같은 뻔하고 부적절한 패턴은 절대 금지
+6. 각 제목은 간결하고 클릭을 유도하는 형식으로
+7. 인물명에 비즈니스/돈 관련 단어를 조합하지 마세요
+
+응답은 반드시 JSON 형식으로만:
+{{"titles": ["제목1", "제목2", "제목3", "제목4"]}}"""
+
+        response = gemini_model.generate_content(prompt)
+        result_text = response.text.strip()
+        
+        # JSON 파싱 (코드 블록 제거)
+        import json
+        import re
+        
+        # ```json ... ``` 형식이면 제거
+        json_match = re.search(r'```json\s*(.*?)\s*```', result_text, re.DOTALL)
+        if json_match:
+            result_text = json_match.group(1)
+        elif '```' in result_text:
+            result_text = result_text.replace('```', '')
+        
+        result = json.loads(result_text)
+        
+        return {
+            "title_patterns": result.get("titles", []),
+            "source": "gemini_ai"
+        }
+        
+    except Exception as e:
+        print(f"❌ Gemini 제목 생성 오류: {e}")
+        # 오류 시 실제 영상 제목 사용
+        if related_videos and len(related_videos) > 0:
+            return {
+                "title_patterns": [v['title'] for v in related_videos[:4]],
+                "source": "related_videos"
+            }
+        return {
+            "title_patterns": [
+                f"{keyword} 완벽 가이드",
+                f"{keyword} 핵심 정리",
+                f"{keyword} 실전 활용법",
+                f"{keyword} 트렌드 분석"
+            ],
+            "source": "fallback"
+        }
+
 @app.post("/api/youtube/force-refresh")
 async def force_refresh():
-    """강제 새로고침 - 즉시 크롤링 실행"""
+    """강제 새로고침 - 즉시 YouTube API로 데이터 수집"""
+    if not youtube_service:
+        raise HTTPException(
+            status_code=503,
+            detail="YouTube API가 설정되지 않았습니다. .env 파일에 YOUTUBE_API_KEY를 설정하세요."
+        )
+    
     try:
         print("🔄 강제 새로고침 요청...")
         
-        main_categories = [
-            '창업/부업', '재테크/금융', '과학기술', '자기계발', '마케팅/비즈니스',
-            '요리/음식', '게임', '운동/건강', '교육/학습', '음악'
-        ]
+        success = fetch_youtube_data()
         
-        videos = ytdlp_crawler.get_trending_by_category(main_categories, per_category=30)
-        
-        if videos and len(videos) > 0:
-            ytdlp_crawler.save_to_cache(videos)
+        if success:
             return {
                 "success": True,
-                "message": f"새로고침 완료: {len(videos)}개 영상 업데이트",
-                "timestamp": datetime.now().isoformat()
+                "message": f"새로고침 완료: {len(cached_videos)}개 영상 업데이트",
+                "timestamp": datetime.now().isoformat(),
+                "source": "youtube_api_v3"
             }
         else:
             return {

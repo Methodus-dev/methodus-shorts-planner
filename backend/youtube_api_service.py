@@ -74,6 +74,74 @@ class YouTubeAPIService:
             '비영리/사회운동': '비영리/사회운동'
         }
     
+    def detect_language(self, text: str) -> str:
+        """
+        텍스트에서 언어 감지
+        
+        Args:
+            text: 분석할 텍스트
+        
+        Returns:
+            감지된 언어 ('한국어', '일본어', '영어', '중국어', '기타')
+        """
+        if not text:
+            return '기타'
+        
+        # 각 언어별 문자 개수 카운트
+        korean_count = 0
+        japanese_count = 0
+        chinese_count = 0
+        english_count = 0
+        
+        for char in text:
+            # 한글 (가-힣)
+            if '\uac00' <= char <= '\ud7a3':
+                korean_count += 1
+            # 일본어 히라가나 (ぁ-ん)
+            elif '\u3040' <= char <= '\u309f':
+                japanese_count += 1
+            # 일본어 가타카나 (ァ-ヶ)
+            elif '\u30a0' <= char <= '\u30ff':
+                japanese_count += 1
+            # 영어 (A-Z, a-z)
+            elif ('A' <= char <= 'Z') or ('a' <= char <= 'z'):
+                english_count += 1
+            # 중국어 간체/번체 (CJK Unified Ideographs)
+            elif '\u4e00' <= char <= '\u9fff':
+                chinese_count += 1
+        
+        # 우선순위 기반 언어 감지
+        # 1. 한글이 5개 이상 있으면 무조건 한국어
+        if korean_count >= 5:
+            return '한국어'
+        
+        # 2. 일본어 문자(히라가나 or 가타카나)가 3개 이상 있으면 일본어
+        if japanese_count >= 3:
+            return '일본어'
+        
+        # 3. 중국어 한자가 5개 이상 있고, 한글/일본어가 없으면 중국어
+        if chinese_count >= 5 and korean_count == 0 and japanese_count == 0:
+            return '중국어'
+        
+        # 4. 위 조건에 해당하지 않으면 가장 많이 사용된 언어
+        counts = {
+            '한국어': korean_count,
+            '일본어': japanese_count,
+            '중국어': chinese_count,
+            '영어': english_count
+        }
+        
+        max_count = max(counts.values())
+        if max_count == 0:
+            return '기타'
+        
+        # 가장 많이 사용된 언어 반환 (동점인 경우 우선순위)
+        for lang in ['한국어', '일본어', '중국어', '영어']:
+            if counts[lang] == max_count:
+                return lang
+        
+        return '기타'
+    
     def get_trending_videos(
         self,
         region_code: str = 'KR',
@@ -250,9 +318,9 @@ class YouTubeAPIService:
             youtube_category = self.category_mapping.get(category_id, '기타')
             app_category = self.app_category_mapping.get(youtube_category, '기타')
             
-            # 언어 감지 (간단한 방식: 제목에 한글이 있으면 한국어)
+            # 언어 감지 (제목 기반)
             title = snippet['title']
-            language = '한국어' if any('\uac00' <= char <= '\ud7a3' for char in title) else '영어'
+            language = self.detect_language(title)
             
             # 지역
             region = '국내' if region_code == 'KR' else '해외'

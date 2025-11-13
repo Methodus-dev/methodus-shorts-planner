@@ -1,6 +1,6 @@
 // 개발/프로덕션 환경에 따라 API URL 설정
 const API_BASE_URL = import.meta.env.VITE_API_URL 
-  ? `${import.meta.env.VITE_API_URL}/api`
+  ? import.meta.env.VITE_API_URL
   : (import.meta.env.PROD 
       ? 'https://methodus-backend.onrender.com'  // Production: Render 배포 서버
       : 'http://localhost:8000');  // Development: 로컬 서버 (포트 8000)

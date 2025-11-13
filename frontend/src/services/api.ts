@@ -271,87 +271,32 @@ export async function getYoutubeTrending(
     }
   }
   
-  // 로컬 개발 환경에서 API 호출 시도
-  if (!import.meta.env.PROD) {
-    try {
-      const params = new URLSearchParams({
-        count: count.toString(),
-        ...(filters?.category && { category: filters.category }),
-        ...(filters?.language && { language: filters.language }),
-        ...(filters?.sort_by && { sort_by: filters.sort_by }),
-        ...(filters?.video_type && { video_type: filters.video_type }),
-        ...(forceRefresh && { force_refresh: 'true' })
-      });
-      
-      console.log(`🔍 API 호출: ${API_BASE_URL}/api/youtube/trending?${params}`);
-      const response = await fetch(`${API_BASE_URL}/api/youtube/trending?${params}`);
-      
-      if (!response.ok) {
-        throw new Error(`API 호출 실패: ${response.status}`);
-      }
-      
-      const result = await response.json();
-      console.log(`✅ API 응답: ${result.count}개 영상, 필터: ${JSON.stringify(filters)}`);
-      return result;
-    } catch (error) {
-      console.log('로컬 API 호출 실패, 캐시 데이터 사용:', error);
-    }
-  }
-  
-  // 실제 크롤링 데이터 사용 (API 호출 실패 시 fallback)
-  console.log('📊 캐시 데이터 사용 (API 호출 실패)');
-  
-  // @ts-ignore
-  let filteredVideos: TrendingVideo[] = (realCacheData.videos || []).map((v: any) => ({
-    ...v,
-    is_shorts: v.is_shorts === true,  // null이나 undefined를 false로 변환
-    video_type: v.video_type || (v.is_shorts ? '쇼츠' : '롱폼')
-  }));
-  
-  // 필터 적용
-  console.log(`🔍 필터 적용 전: ${filteredVideos.length}개`);
-  console.log(`🔍 적용할 필터:`, filters);
-  
-  if (filters?.category) {
-    filteredVideos = filteredVideos.filter(v => v.category === filters.category);
-    console.log(`📂 카테고리 필터 (${filters.category}): ${filteredVideos.length}개`);
-  }
-  if (filters?.language) {
-    filteredVideos = filteredVideos.filter(v => v.language === filters.language);
-    console.log(`🗣️ 언어 필터 (${filters.language}): ${filteredVideos.length}개`);
-  }
-  if (filters?.video_type) {
-    filteredVideos = filteredVideos.filter(v => v.video_type === filters.video_type);
-    console.log(`🎬 영상 타입 필터 (${filters.video_type}): ${filteredVideos.length}개`);
-  }
-  
-  // 정렬
-  if (filters?.sort_by === 'trend_score') {
-    filteredVideos.sort((a, b) => (b.trend_score || 0) - (a.trend_score || 0));
-  } else if (filters?.sort_by === 'views') {
-    filteredVideos.sort((a, b) => {
-      const parseViews = (views: string) => {
-        if (views.includes('M')) return parseFloat(views) * 1000000;
-        if (views.includes('K')) return parseFloat(views) * 1000;
-        return parseFloat(views.replace(',', ''));
-      };
-      return parseViews(b.views) - parseViews(a.views);
+  // API 호출
+  try {
+    const params = new URLSearchParams({
+      count: count.toString(),
+      ...(filters?.category && { category: filters.category }),
+      ...(filters?.language && { language: filters.language }),
+      ...(filters?.sort_by && { sort_by: filters.sort_by }),
+      ...(filters?.video_type && { video_type: filters.video_type }),
+      ...(forceRefresh && { force_refresh: 'true' })
     });
+    
+    console.log(`🔍 API 호출: ${API_BASE_URL}/api/youtube/trending?${params}`);
+    const response = await fetch(`${API_BASE_URL}/api/youtube/trending?${params}`);
+    
+    if (!response.ok) {
+      throw new Error(`API 호출 실패: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    console.log(`✅ API 응답: ${result.count}개 영상`);
+    return result;
+  } catch (error) {
+    console.error('❌ API 호출 실패:', error);
+    // API 실패 시 에러를 다시 던져서 사용자에게 알림
+    throw new Error('백엔드 서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.');
   }
-  
-  // 개수 제한 - 필터링된 전체 데이터 반환 (무한 스크롤용)
-  const finalVideos = filteredVideos.slice(0, Math.min(count, filteredVideos.length));
-  
-  return {
-    trending_videos: finalVideos,
-    count: finalVideos.length,
-    // @ts-ignore
-    total_count: filteredVideos.length,  // 필터링된 전체 개수
-    filters_applied: filters,
-    // @ts-ignore
-    last_updated: realCacheData.last_updated || new Date().toISOString(),
-    source: 'real_cache_data'
-  };
 }
 
 export async function getFilterOptions(): Promise<FilterOptions> {

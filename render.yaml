@@ -3,17 +3,17 @@ services:
     name: methodus-backend
     env: python
     plan: free
-    buildCommand: "cd backend && pip install -r requirements.txt"
-    startCommand: "cd backend && python main.py"
+    region: oregon
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "uvicorn main:app --host 0.0.0.0 --port $PORT"
+    rootDir: backend
     envVars:
-      - key: PORT
-        value: 8000
       - key: PYTHON_VERSION
         value: 3.11.0
       - key: YOUTUBE_API_KEY
         sync: false
       - key: GEMINI_API_KEY
         sync: false
-      - key: CORS_ORIGINS
-        value: "*"
+      - key: PORT
+        generateValue: true
 

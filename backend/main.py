@@ -13,11 +13,18 @@ import os
 import threading
 import time
 from youtube_api_service import YouTubeAPIService
-import google.generativeai as genai
 from dotenv import load_dotenv
 
 # 환경 변수 로드
 load_dotenv()
+
+# Gemini는 선택적으로 import
+try:
+    import google.generativeai as genai
+    GEMINI_AVAILABLE = True
+except ImportError:
+    GEMINI_AVAILABLE = False
+    print("⚠️ google-generativeai 패키지가 설치되지 않았습니다 (AI 기능 비활성화)")
 
 app = FastAPI(
     title="Methodus Shorts Planner API",
@@ -71,19 +78,21 @@ except ValueError as e:
     print("   설정 방법은 YOUTUBE_API_SETUP.md를 참조하세요.")
     youtube_service = None
 
-# Google Gemini 초기화
+# Google Gemini 초기화 (선택적)
 gemini_api_key = os.getenv("GEMINI_API_KEY")
 gemini_model = None
-if gemini_api_key:
+if GEMINI_AVAILABLE and gemini_api_key:
     try:
         genai.configure(api_key=gemini_api_key)
-        gemini_model = genai.GenerativeModel('gemini-2.0-flash')  # 무료 최신 모델
+        gemini_model = genai.GenerativeModel('gemini-2.0-flash')
         print("✅ Google Gemini 2.0 Flash 초기화 완료 (무료!)")
     except Exception as e:
         print(f"⚠️ Gemini API 초기화 실패: {e}")
         gemini_model = None
+elif not GEMINI_AVAILABLE:
+    print("⚠️ Gemini AI 패키지가 없습니다 (기본 패턴 사용)")
 else:
-    print("⚠️ GEMINI_API_KEY가 설정되지 않았습니다 (선택사항)")
+    print("⚠️ GEMINI_API_KEY가 설정되지 않았습니다")
 
 # 캐시된 데이터 저장소
 cached_videos = []
